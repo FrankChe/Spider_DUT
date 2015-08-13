@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*- 
 
-
 __author__ = 'chexiaoyu'
 
 import sys
@@ -12,6 +11,7 @@ import cookielib
 import re
 from pyquery import PyQuery as pq
 import getpass
+import time
 #DUT计算绩点
 
 #项目存在的问题：由于大连理工大学教务处的网站的成绩查看页面是JS产生的，Url中最后一个参数是通过js动态产生的，目前不是到应该如何解决该问题。
@@ -23,7 +23,8 @@ class DUT:
         self.loginUrl = 'http://202.118.65.21:8089/loginAction.do'
         #本学期成绩Url
         #self.gradeUrl = 'http://202.118.65.21:8089/gradeLnAllAction.do?type=ln&oper=fa'
-        self.gradeUrl = 'http://202.118.65.21:8089/gradeLnAllAction.do?type=ln&oper=fainfo&fajhh=4242'
+        #self.gradeUrl = 'http://202.118.65.21:8089/gradeLnAllAction.do?type=ln&oper=fainfo&fajhh=4242'
+        self.gradeUrl = None
         #self.gradeUrl = 'http://202.118.65.21:8089/gradeLnAllAction.do?type=ln&oper=sxinfo&lnsxdm=001'
         #self.gradeUrl = 'http://202.118.65.21:8089/gradeLnAllAction.do?type=ln&oper=fa:164'
         self.cookies = cookielib.CookieJar()
@@ -57,77 +58,78 @@ class DUT:
         page = self.getPage()
 
 
-    def getGrades(self):
-        #获得本学期成绩页面
+    def getGrades_software(self):
+        #获得本学期成绩(软件工程)
+        self.gradeUrl = 'http://202.118.65.21:8089/gradeLnAllAction.do?type=ln&oper=fainfo&fajhh=4242'
         page = self.getPage()
-
         #print page
 
         d = pq(page)
         #print d
         p = d('.odd')
-        #print p
-        #print pq(p).find('tr td td td')
-        #for i in range(len(p)):
-        #     temp = p.pq(i).find('td').eq(2).text()
-        #     print temp
+
         for i in p:
             self.credit.append(float(pq(i).find('td').eq(4).text()))
             self.grades.append(float(pq(i).find('td p').eq(0).text().encode("utf-8")))
 
+    def getGrades_required(self,type):
+        #获得本学期必修课成绩
+        if type == '1':
+            self.gradeUrl = 'http://202.118.65.21:8089/gradeLnAllAction.do?type=ln&oper=fainfo&fajhh=4242'
+        else:
+            self.gradeUrl = 'http://202.118.65.21:8089/gradeLnAllAction.do?type=ln&oper=fainfo&fajhh=4243'
+        page = self.getPage()
+        credit = []
+        grades = []
+        d = pq(page)
+        p = d('.odd')
+
+        for i in p:
+            if pq(i).find('td').eq(5).text().strip() == '必修':
+                credit.append(float(pq(i).find('td').eq(4).text()))
+                grades.append(float(pq(i).find('td p').eq(0).text().encode("utf-8")))
+        return credit,grades
 
 
-
-        # for i in range(len(self.credit)):
-        #     self.credit[i] = map(float,self.credit[i])
-        #     self.grades[i] = map(float,self.grades[i])
-        # self.credit = map(float,self.credit)
-        # self.grades = map(float,self.grades)
-        # self.credit = [float(i) for i in self.credit]
-        # self.grades = [float(i) for i in self.grades]
-
-        #print self.credit
-        #print self.grades
-
-
-
-             #self.grades.extend(pq(i).text())
-             #print self.grades
-
-        #正则匹配
+    def getGrades_network(self):
+        #获得本学期成绩(网络工程)
+        self.gradeUrl = 'http://202.118.65.21:8089/gradeLnAllAction.do?type=ln&oper=fainfo&fajhh=4243'
+        page = self.getPage()
         #print page
+        d = pq(page)
+        p = d('.odd')
+        for i in p:
+            if pq(i).find('td').eq(6).text().strip() == "通过":
+                continue
+            self.credit.append(float(pq(i).find('td').eq(4).text()))
+            self.grades.append(float(pq(i).find('td').eq(6).text()))
+        return self.credit,self.grades
 
-        # myItems = re.findall('<tr\sclass[\s\S]*?<td[\s\S]*?<td[\s\S]*?<td[\s\S]*?>([\s\S]*?)</td>[\s\S]*?<p[\s\S]*?>(.*?)&',page,re.S)
-        #
-        # #print myItems
-        # for item in myItems:
-        #     print item
-        #     self.credit.append(item[0].encode('gbk'))
-        #     self.grades.append(item[1].encode('gbk'))
-        #     print item
-        # self.getGrade()
 
-    # def getGrade(self):
-    #     #计算总绩点
-    #     sum = 0.0
-    #     weight = 0.0
-    #     for i in range(len(self.credit)):
-    #         if(self.grades[i].isdigit()):
-    #             sum += string.atof(self.credit[i])*string.atof(self.grades[i])
-    #             weight += string.atof(self.credit[i])
-    #
-    #     print u"绩点为：",sum/weight
-
-    def getGrade(self):
+    def getGrade(self,type):
         #计算总绩点
-        self.getGrades()
+        if type == '1':
+            self.getGrades_software()
+            credit, grades = self.getGrades_required(type)
+        else:
+            self.getGrades_network()
+            credit, grades = self.getGrades_required(type)
         sum = 0.0
         weight = 0.0
         for i in range(len(self.credit)):
             sum += self.credit[i] * self.grades[i]
             weight += self.credit[i]
+
+        sum_re = 0.0
+        weight_re = 0.0
+        for i in range(len(credit)):
+            sum_re += credit[i] * grades[i]
+            weight_re += credit[i]
+
         print "你的平均成绩为：",sum/weight
-        print "你的GPA为（标准算法）:",sum*4/(weight*100)
+        print "你的GPA为(标准算法)：",sum*4/(weight*100)
+        print "你的必修课平均成绩为：",sum_re/weight_re
+        print "你的必修课GPA为(标准算法)：",sum_re*4/(weight_re*100)
 
 
 
@@ -136,9 +138,14 @@ class DUT:
 print "请输入学号和密码："
 username = raw_input()
 password = getpass.getpass()
+type = raw_input("请输入你的专业类型： 1. 软件工程   2. 网络工程") #用以区分专业类型
+if type != '1' and type != '2':
+    print "输入非法，即将退出程序..."
+    time.sleep(2)
+    exit(1)
 
-# username = '201292100'
-# password = '310014'
-dut = DUT(username,password)
-dut.getGrade()
-#dut.getPage()
+try:
+    dut = DUT(username,password)
+    dut.getGrade(type)
+except:
+    print "失败！"
