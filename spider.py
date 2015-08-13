@@ -60,6 +60,7 @@ class DUT:
     def getGrades(self):
         #获得本学期成绩页面
         page = self.getPage()
+
         #print page
 
         d = pq(page)
@@ -73,11 +74,15 @@ class DUT:
         for i in p:
             self.credit.append(float(pq(i).find('td').eq(4).text()))
             self.grades.append(float(pq(i).find('td p').eq(0).text().encode("utf-8")))
+
+
+
+
         # for i in range(len(self.credit)):
         #     self.credit[i] = map(float,self.credit[i])
         #     self.grades[i] = map(float,self.grades[i])
-        #self.credit = map(float,self.credit)
-        #self.grades = map(float,self.grades)
+        # self.credit = map(float,self.credit)
+        # self.grades = map(float,self.grades)
         # self.credit = [float(i) for i in self.credit]
         # self.grades = [float(i) for i in self.grades]
 
@@ -96,8 +101,7 @@ class DUT:
         #
         # #print myItems
         # for item in myItems:
-        #      print item
-
+        #     print item
         #     self.credit.append(item[0].encode('gbk'))
         #     self.grades.append(item[1].encode('gbk'))
         #     print item
