@@ -1,12 +1,17 @@
+# -*- coding: utf-8 -*- 
+
+
 __author__ = 'chexiaoyu'
-#coding=utf-8
+
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
 import urllib
 import urllib2
 import cookielib
 import re
 from pyquery import PyQuery as pq
 import getpass
-
 #DUT计算绩点
 
 #项目存在的问题：由于大连理工大学教务处的网站的成绩查看页面是JS产生的，Url中最后一个参数是通过js动态产生的，目前不是到应该如何解决该问题。
@@ -18,9 +23,9 @@ class DUT:
         self.loginUrl = 'http://202.118.65.21:8089/loginAction.do'
         #本学期成绩Url
         #self.gradeUrl = 'http://202.118.65.21:8089/gradeLnAllAction.do?type=ln&oper=fa'
-        #self.gradeUrl = 'http://202.118.65.21:8089/gradeLnAllAction.do?type=ln&oper=fainfo&fajhh=4243'
-        self.gradeUrl = 'http://202.118.65.21:8089/gradeLnAllAction.do?type=ln&oper=sxinfo&lnsxdm=001'
-
+        self.gradeUrl = 'http://202.118.65.21:8089/gradeLnAllAction.do?type=ln&oper=fainfo&fajhh=4242'
+        #self.gradeUrl = 'http://202.118.65.21:8089/gradeLnAllAction.do?type=ln&oper=sxinfo&lnsxdm=001'
+        #self.gradeUrl = 'http://202.118.65.21:8089/gradeLnAllAction.do?type=ln&oper=fa:164'
         self.cookies = cookielib.CookieJar()
         self.postdata = urllib.urlencode({
             'zjh':username,
@@ -31,6 +36,9 @@ class DUT:
         #学分list
         self.credit = []
         self.grades = []
+
+
+
     #获取本学期成绩页面
     def getPage(self):
         request = urllib2.Request(
@@ -38,10 +46,16 @@ class DUT:
             data = self.postdata)
         result = self.opener.open(request)
         result = self.opener.open(self.gradeUrl)
+        
+        #print result.read().decode('gbk')
         #打印登陆内容
 
         return result.read().decode('gbk')
         #return result.read()
+
+    def get_trueUrl(self):
+        page = self.getPage()
+
 
     def getGrades(self):
         #获得本学期成绩页面
@@ -57,15 +71,18 @@ class DUT:
         #     temp = p.pq(i).find('td').eq(2).text()
         #     print temp
         for i in p:
-            self.credit.append(pq(i).find('td').eq(4).text())
-            self.grades.append(pq(i).find('td p').eq(0).text())
+            self.credit.append(float(pq(i).find('td').eq(4).text()))
+            self.grades.append(float(pq(i).find('td p').eq(0).text().encode("utf-8")))
+        # for i in range(len(self.credit)):
+        #     self.credit[i] = map(float,self.credit[i])
+        #     self.grades[i] = map(float,self.grades[i])
+        #self.credit = map(float,self.credit)
+        #self.grades = map(float,self.grades)
+        # self.credit = [float(i) for i in self.credit]
+        # self.grades = [float(i) for i in self.grades]
 
-
-        self.credit = [float(i) for i in self.credit]
-        self.grades = [float(i) for i in self.grades]
-
-        print self.credit
-        print self.grades
+        #print self.credit
+        #print self.grades
 
 
 
@@ -106,7 +123,7 @@ class DUT:
             sum += self.credit[i] * self.grades[i]
             weight += self.credit[i]
         print "你的平均成绩为：",sum/weight
-        print "你的GPA为（标准算法）",sum*4/(weight*100)
+        print "你的GPA为（标准算法）:",sum*4/(weight*100)
 
 
 
@@ -120,3 +137,4 @@ password = getpass.getpass()
 # password = '310014'
 dut = DUT(username,password)
 dut.getGrade()
+#dut.getPage()
